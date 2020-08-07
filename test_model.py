@@ -1,21 +1,20 @@
-import sys
 from PySide2 import QtGui, QtCore, QtWidgets
+from PySide2.QtCharts import QtCharts
 import tensorflow as tf
 import numpy as np
 
 
 class Canvas(QtWidgets.QWidget):
-    WINDOW_SIZE = 896
     DATA_SIZE = 28
 
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.image = QtGui.QImage(Canvas.DATA_SIZE, Canvas.DATA_SIZE, QtGui.QImage.Format_Grayscale8)
         self.clear()
         self.model = tf.keras.models.load_model('model')
 
     def clear(self):
-        self.image.fill(QtCore.Qt.white)
+        self.image.fill(QtCore.Qt.lightGray)
         self.update()
 
     def mousePressEvent(self, event):
@@ -46,21 +45,49 @@ class Canvas(QtWidgets.QWidget):
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
-        painter.drawImage(0, 0, self.image.scaled(Canvas.WINDOW_SIZE, Canvas.WINDOW_SIZE))
+        painter.drawImage(0, 0, self.image.scaled(self.width(), self.height()))
+        painter.end()
         data = np.expand_dims(np.asarray(self.image.bits()) / 255.0, 0)
         result = np.argmax(self.model.predict(data)[0])
         print(result)
 
     def toCellCoordinates(self, point):
-        return point * Canvas.DATA_SIZE / Canvas.WINDOW_SIZE
+        return QtCore.QPoint(point.x() * Canvas.DATA_SIZE / self.width(), point.y() * Canvas.DATA_SIZE / self.height())
+
+    def sizeHint(self):
+        return QtCore.QSize(28, 28)
+
+    def heightForWidth(self, width):
+        return width
 
 
-class MainWindow(QtWidgets.QMainWindow):
+class MainWindow(QtWidgets.QWidget):
     def __init__(self):
-        super().__init__()
-        self.setMinimumSize(Canvas.WINDOW_SIZE, Canvas.WINDOW_SIZE)
-        self.canvas = Canvas(self)
-        self.canvas.setGeometry(0, 0, Canvas.WINDOW_SIZE, Canvas.WINDOW_SIZE)
+        super(MainWindow, self).__init__()
+        
+        self.canvas = Canvas()
+        size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
+        size_policy.setHeightForWidth(True)
+        self.canvas.setSizePolicy(size_policy)
+        label = QtWidgets.QLabel('Testi')
+
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.canvas)
+        layout.addWidget(label)
+
+        self.setLayout(layout)
+        self.show()
+
+        # probability = QtCharts.QBarSet('Probability')
+        # probability.append([0.0, 0.1, 0.2])
+        # series = QtCharts.QBarSeries()
+        # series.append(probability)
+        # chart = QtCharts.QChart()
+        # chart.addSeries(series)
+        # chart.setTitle('Probability')
+        # self.chart_view = QtCharts.QChartView(chart)
+        # self.chart_view.setGeometry(896, 0, 300, 300)
+        # self.setMinimumSize(1280, 720)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Escape:
@@ -68,7 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == '__main__':
+    import sys
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
-    window.show()
     app.exec_()
