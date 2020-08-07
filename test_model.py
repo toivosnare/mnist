@@ -12,45 +12,37 @@ class Canvas(QtWidgets.QWidget):
         super().__init__(parent)
         self.image = QtGui.QImage(Canvas.DATA_SIZE, Canvas.DATA_SIZE, QtGui.QImage.Format_Grayscale8)
         self.clear()
-        self.last_point = None
         self.model = tf.keras.models.load_model('model')
-
-    # def draw_opaque_line(self, p0, p1, width):
-    #     painter = QtGui.QPainter(self.image)
-    #     d = p1 - p0
-    #     n = (QtGui.QVector2D(d.y(), -d.x()).normalized() * width).toPoint()
-    #     gradient = QtGui.QLinearGradient(p0 + n, p0 - n)
-    #     gradient.setColorAt(0, QtGui.QColor.fromHsv(0, 0, 255, 0))
-    #     gradient.setColorAt(0.35, QtGui.QColor.fromHsv(0, 0, 255, 0))
-    #     gradient.setColorAt(0.5, QtGui.QColor.fromHsv(0, 0, 0, 20))
-    #     gradient.setColorAt(0.65, QtGui.QColor.fromHsv(0, 0, 255, 0))
-    #     gradient.setColorAt(1, QtGui.QColor.fromHsv(0, 0, 255, 0))
-    #     brush = QtGui.QBrush(gradient)
-    #     painter.setBrush(brush)
-    #     pen = QtGui.QPen(brush, width)
-    #     pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-    #     painter.setPen(pen)
-    #     painter.drawLine(p0, p1)
-    #     self.update()
 
     def clear(self):
         self.image.fill(QtCore.Qt.white)
         self.update()
 
-    def draw_line(self, p0, p1, width):
-        painter = QtGui.QPainter(self.image)
-        pen = QtGui.QPen()
-        pen.setWidth(width)
-        pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-        painter.setPen(pen)
-        painter.drawLine(p0, p1)
-        self.update()
+    def mousePressEvent(self, event):
+        self.last_point = self.toCellCoordinates(event.pos())
+        self.paintCell(self.last_point, 5, 0.5)
 
     def mouseMoveEvent(self, event):
-        new_point = event.pos() * Canvas.DATA_SIZE / Canvas.WINDOW_SIZE
-        if self.last_point:
-            self.draw_line(self.last_point, new_point, 1)
-        self.last_point = new_point
+        new_point = self.toCellCoordinates(event.pos())
+        if self.last_point and not new_point == self.last_point:
+            self.paintCell(new_point, 5, 0.5)
+            self.last_point = new_point
+
+    def mouseReleaseEvent(self, event):
+        self.last_point = None
+
+    def paintCell(self, point, radius, strength):
+        painter = QtGui.QPainter(self.image)
+        painter.setPen(QtCore.Qt.NoPen)
+        gradient = QtGui.QRadialGradient(point, radius)
+        gradient.setColorAt(0, QtGui.QColor(0, 0, 0, 255))
+        gradient.setColorAt(strength, QtGui.QColor(0, 0, 0, 0))
+        gradient.setColorAt(0.9, QtGui.QColor(0, 0, 0, 0))
+        brush = QtGui.QBrush(gradient)
+        painter.setBrush(brush)
+        painter.drawEllipse(point, radius / 2, radius / 2)
+        painter.end()
+        self.update()
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
@@ -59,8 +51,8 @@ class Canvas(QtWidgets.QWidget):
         result = np.argmax(self.model.predict(data)[0])
         print(result)
 
-    def mouseReleaseEvent(self, event):
-        self.last_point = None
+    def toCellCoordinates(self, point):
+        return point * Canvas.DATA_SIZE / Canvas.WINDOW_SIZE
 
 
 class MainWindow(QtWidgets.QMainWindow):
