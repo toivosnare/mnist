@@ -1,13 +1,19 @@
 import sys
 from PySide2 import QtGui, QtCore, QtWidgets
+import tensorflow as tf
+import numpy as np
 
 
 class Canvas(QtWidgets.QWidget):
+    WINDOW_SIZE = 896
+    DATA_SIZE = 28
+
     def __init__(self, parent):
         super().__init__(parent)
-        self.image = QtGui.QImage(500, 500, QtGui.QImage.Format_Grayscale8)
-        self.image.fill(QtCore.Qt.white)
+        self.image = QtGui.QImage(Canvas.DATA_SIZE, Canvas.DATA_SIZE, QtGui.QImage.Format_Grayscale8)
+        self.clear()
         self.last_point = None
+        self.model = tf.keras.models.load_model('model')
 
     # def draw_opaque_line(self, p0, p1, width):
     #     painter = QtGui.QPainter(self.image)
@@ -27,6 +33,10 @@ class Canvas(QtWidgets.QWidget):
     #     painter.drawLine(p0, p1)
     #     self.update()
 
+    def clear(self):
+        self.image.fill(QtCore.Qt.white)
+        self.update()
+
     def draw_line(self, p0, p1, width):
         painter = QtGui.QPainter(self.image)
         pen = QtGui.QPen()
@@ -37,20 +47,17 @@ class Canvas(QtWidgets.QWidget):
         self.update()
 
     def mouseMoveEvent(self, event):
-        if self.last_point == None:
-            self.last_point = event.pos()
-            return
-        self.draw_line(self.last_point, event.pos(), 30)
-        self.last_point = event.pos()
+        new_point = event.pos() * Canvas.DATA_SIZE / Canvas.WINDOW_SIZE
+        if self.last_point:
+            self.draw_line(self.last_point, new_point, 1)
+        self.last_point = new_point
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
-        painter.drawImage(0, 0, self.image)
-        n = 28
-        for index, value in enumerate(self.image.scaled(n, n).bits()):
-            print(value, end=' ')
-            if not index % n:
-                print()
+        painter.drawImage(0, 0, self.image.scaled(Canvas.WINDOW_SIZE, Canvas.WINDOW_SIZE))
+        data = np.expand_dims(np.asarray(self.image.bits()) / 255.0, 0)
+        result = np.argmax(self.model.predict(data)[0])
+        print(result)
 
     def mouseReleaseEvent(self, event):
         self.last_point = None
@@ -59,12 +66,17 @@ class Canvas(QtWidgets.QWidget):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setMinimumSize(500, 500)
+        self.setMinimumSize(Canvas.WINDOW_SIZE, Canvas.WINDOW_SIZE)
         self.canvas = Canvas(self)
-        self.canvas.setGeometry(0, 0, 500, 500)
+        self.canvas.setGeometry(0, 0, Canvas.WINDOW_SIZE, Canvas.WINDOW_SIZE)
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Escape:
+            self.canvas.clear()
 
 
-app = QtWidgets.QApplication(sys.argv)
-window = MainWindow()
-window.show()
-app.exec_()
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    app.exec_()
