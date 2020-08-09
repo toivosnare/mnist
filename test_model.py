@@ -14,7 +14,7 @@ class Canvas(QtWidgets.QWidget):
         self.model = tf.keras.models.load_model('model')
 
     def clear(self):
-        self.image.fill(QtCore.Qt.lightGray)
+        self.image.fill(QtCore.Qt.white)
         self.update()
 
     def mousePressEvent(self, event):
@@ -48,8 +48,8 @@ class Canvas(QtWidgets.QWidget):
         painter.drawImage(0, 0, self.image.scaled(self.width(), self.height()))
         painter.end()
         data = np.expand_dims(np.asarray(self.image.bits()) / 255.0, 0)
-        result = np.argmax(self.model.predict(data)[0])
-        print(result)
+        for digit, probability in enumerate(self.model.predict(data)[0]):
+            self.parentWidget().probabilities.insert(digit, probability)
 
     def toCellCoordinates(self, point):
         return QtCore.QPoint(point.x() * Canvas.DATA_SIZE / self.width(), point.y() * Canvas.DATA_SIZE / self.height())
@@ -69,29 +69,40 @@ class MainWindow(QtWidgets.QWidget):
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         size_policy.setHeightForWidth(True)
         self.canvas.setSizePolicy(size_policy)
-        label = QtWidgets.QLabel('Testi')
+
+        self.probabilities = QtCharts.QBarSet('Probability')
+        self.probabilities.append([0.1 for _ in range(10)])
+        series = QtCharts.QBarSeries()
+        series.append(self.probabilities)
+        chart = QtCharts.QChart()
+        chart.addSeries(series)
+        chart_view = QtCharts.QChartView(chart)
+        chart_view.setSizePolicy(size_policy)
+
+        x_axis = QtCharts.QBarCategoryAxis()
+        x_axis.setCategories([str(i) for i in range(10)])
+        chart.addAxis(x_axis, QtCore.Qt.AlignBottom)
+        series.attachAxis(x_axis)
+
+        y_axis = QtCharts.QValueAxis()
+        y_axis.setRange(0.0, 1.0)
+        y_axis.setTickCount(11)
+        chart.addAxis(y_axis, QtCore.Qt.AlignLeft)
+        series.attachAxis(y_axis)
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self.canvas)
-        layout.addWidget(label)
+        layout.addWidget(chart_view)
 
         self.setLayout(layout)
         self.show()
 
-        # probability = QtCharts.QBarSet('Probability')
-        # probability.append([0.0, 0.1, 0.2])
-        # series = QtCharts.QBarSeries()
-        # series.append(probability)
-        # chart = QtCharts.QChart()
-        # chart.addSeries(series)
-        # chart.setTitle('Probability')
-        # self.chart_view = QtCharts.QChartView(chart)
-        # self.chart_view.setGeometry(896, 0, 300, 300)
-        # self.setMinimumSize(1280, 720)
-
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Escape:
             self.canvas.clear()
+
+    def sizeHint(self):
+        return QtCore.QSize(1280, 720)
 
 
 if __name__ == '__main__':
