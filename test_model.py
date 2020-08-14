@@ -64,6 +64,7 @@ class Canvas(QtWidgets.QWidget):
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
+        self.setWindowTitle('MNIST Image Classification Test')
         
         self.canvas = Canvas()
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
