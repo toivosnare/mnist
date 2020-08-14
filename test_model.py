@@ -14,7 +14,7 @@ class Canvas(QtWidgets.QWidget):
         self.model = tf.keras.models.load_model('model')
 
     def clear(self):
-        self.image.fill(QtCore.Qt.white)
+        self.image.fill(QtCore.Qt.black)
         self.update()
 
     def mousePressEvent(self, event):
@@ -34,9 +34,9 @@ class Canvas(QtWidgets.QWidget):
         painter = QtGui.QPainter(self.image)
         painter.setPen(QtCore.Qt.NoPen)
         gradient = QtGui.QRadialGradient(point, radius)
-        gradient.setColorAt(0, QtGui.QColor(0, 0, 0, 255))
-        gradient.setColorAt(strength, QtGui.QColor(0, 0, 0, 0))
-        gradient.setColorAt(0.9, QtGui.QColor(0, 0, 0, 0))
+        gradient.setColorAt(0, QtGui.QColor(255, 255, 255, 255))
+        gradient.setColorAt(strength, QtGui.QColor(255, 255, 255, 0))
+        gradient.setColorAt(0.9, QtGui.QColor(255, 255, 255, 0))
         brush = QtGui.QBrush(gradient)
         painter.setBrush(brush)
         painter.drawEllipse(point, radius / 2, radius / 2)
