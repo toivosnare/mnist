@@ -105,8 +105,11 @@ class MainWindow(QtWidgets.QWidget):
         return QtCore.QSize(1280, 720)
 
 
-if __name__ == '__main__':
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
+def main(args):
+    app = QtWidgets.QApplication(args)
     window = MainWindow()
     app.exec_()
+
+if __name__ == '__main__':
+    import sys
+    main(sys.argv)
